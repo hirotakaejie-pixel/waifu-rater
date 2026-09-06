@@ -36,6 +36,17 @@
     .intro-copy { max-width: 430px; color: var(--muted); line-height: 1.7; font-size: 15px; }
     .intro-copy strong { color: var(--ink); }
     .toolbar { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 22px; padding-bottom: 17px; border-bottom: 1px solid var(--line); }
+    .toolbar-actions { display: flex; align-items: center; gap: 16px; }
+    .add-button { border: 0; border-radius: 999px; padding: 12px 16px; color: white; background: var(--ink); font: 700 11px 'DM Mono', monospace; letter-spacing: .04em; cursor: pointer; transition: transform .2s ease, background .2s ease; }
+    .add-button:hover { background: var(--coral); transform: translateY(-2px); }
+    .add-form { display: none; grid-template-columns: 1fr 1fr auto auto; align-items: end; gap: 12px; margin-bottom: 22px; padding: 18px; background: rgba(255,255,255,.72); border: 1px solid var(--line); border-radius: 8px; }
+    .add-form.open { display: grid; }
+    .field { display: grid; gap: 7px; color: var(--muted); font: 500 10px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .06em; }
+    .field input { width: 100%; border: 1px solid var(--line); border-radius: 5px; padding: 11px 12px; background: white; color: var(--ink); font: 14px Manrope, sans-serif; }
+    .field input:focus { border-color: var(--coral); outline: none; box-shadow: 0 0 0 4px rgba(238,108,103,.12); }
+    .form-button { border: 1px solid var(--ink); border-radius: 5px; padding: 11px 13px; background: transparent; color: var(--ink); font: 700 11px 'DM Mono', monospace; cursor: pointer; }
+    .form-button.primary { background: var(--lime); }
+    .form-button:hover { transform: translateY(-1px); }
     .search { width: min(340px, 100%); position: relative; }
     .search input { width: 100%; border: 1px solid var(--line); background: rgba(255,255,255,.7); border-radius: 999px; padding: 12px 18px 12px 40px; color: var(--ink); font: inherit; outline: none; }
     .search input:focus { border-color: var(--coral); box-shadow: 0 0 0 4px rgba(238,108,103,.12); }
@@ -71,8 +82,8 @@
     .leader-sub { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 3px; }
     .leader-score { padding: 7px 10px; color: var(--ink); background: var(--lime); border-radius: 5px; font: 500 12px 'DM Mono', monospace; }
     footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 78px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font: 11px 'DM Mono', monospace; }
-    @media (max-width: 850px) { header { margin-bottom: 48px; } .intro { display: block; } .intro-copy { margin-top: 24px; } .grid { grid-template-columns: repeat(2, 1fr); } .ranking { grid-template-columns: 1fr; gap: 30px; margin-top: 60px; } }
-    @media (max-width: 560px) { .shell { padding: 20px 15px 50px; } nav a:not(.active) { display: none; } .grid { grid-template-columns: 1fr; } .toolbar { align-items: center; } .search { width: 65%; } h1 { font-size: 58px; } footer { display: block; line-height: 1.8; } }
+    @media (max-width: 850px) { header { margin-bottom: 48px; } .intro { display: block; } .intro-copy { margin-top: 24px; } .grid { grid-template-columns: repeat(2, 1fr); } .ranking { grid-template-columns: 1fr; gap: 30px; margin-top: 60px; } .add-form { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .shell { padding: 20px 15px 50px; } nav a:not(.active) { display: none; } .grid { grid-template-columns: 1fr; } .toolbar { align-items: center; } .toolbar-actions { gap: 8px; } .add-button { padding: 11px 10px; } .search { width: 65%; } h1 { font-size: 58px; } footer { display: block; line-height: 1.8; } .add-form { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -89,8 +100,14 @@
 
     <div class="toolbar">
       <label class="search"><span>⌕</span><input id="search" type="search" placeholder="Find a character..."></label>
-      <select class="sort" id="sort" aria-label="Sort characters"><option value="default">SORT: FEATURED</option><option value="rating">SORT: MY RATING</option><option value="name">SORT: A-Z</option></select>
+      <div class="toolbar-actions"><select class="sort" id="sort" aria-label="Sort characters"><option value="default">SORT: FEATURED</option><option value="rating">SORT: MY RATING</option><option value="name">SORT: A-Z</option></select><button class="add-button" id="addButton" type="button">+ ADD PHOTO</button></div>
     </div>
+    <form class="add-form" id="addForm">
+      <label class="field">Name<input id="photoName" type="text" maxlength="40" placeholder="Character name" required></label>
+      <label class="field">Photo<input id="photoFile" type="file" accept="image/*" required></label>
+      <button class="form-button" id="cancelAdd" type="button">CANCEL</button>
+      <button class="form-button primary" type="submit">ADD TO RANKING</button>
+    </form>
     <section class="grid" id="cards" aria-live="polite"></section>
 
     <section class="ranking" id="ranking">
@@ -101,38 +118,61 @@
     <footer id="about"><span>WAIFU ATELIER — PERSONAL EDITION</span><span id="ratedCount">0 / 6 RATED</span></footer>
   </main>
   <script>
-    const characters = [
+    const defaultCharacters = [
       { id: 'miku', name: 'Miku', image: 'miku.jpg' },
       { id: 'chloe', name: 'Chloe', image: 'chloe.jpg' },
       { id: 'marin', name: 'Marin', image: 'marin.jpg' },
       { id: 'haesin', name: 'Haesin', image: 'Haesin.jpg' },
       { id: 'yamada', name: 'Yamada', image: 'yamada.jpg' }
     ];
+    const characters = [...defaultCharacters, ...JSON.parse(localStorage.getItem('waifu-characters') || '[]')];
     const scores = JSON.parse(localStorage.getItem('waifu-scores') || '{}');
     const cards = document.querySelector('#cards');
     const leaderboard = document.querySelector('#leaderboard');
 
     function getScore(id) { return scores[id] || 0; }
+    function escapeHtml(value) { return value.replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character])); }
     function stars(character) {
       return Array.from({ length: 5 }, (_, index) => `<button class="star ${index < getScore(character.id) ? 'selected' : ''}" data-id="${character.id}" data-score="${index + 1}" aria-label="Rate ${character.name} ${index + 1} out of 5">★</button>`).join('');
     }
     function renderCards() {
       const query = document.querySelector('#search').value.toLowerCase().trim();
       const mode = document.querySelector('#sort').value;
-      let visible = characters.filter(item => `${item.name} ${item.type} ${item.tag}`.toLowerCase().includes(query));
+      let visible = characters.filter(item => `${item.name} ${item.type || ''} ${item.tag || ''}`.toLowerCase().includes(query));
       if (mode === 'rating') visible.sort((a, b) => getScore(b.id) - getScore(a.id));
       if (mode === 'name') visible.sort((a, b) => a.name.localeCompare(b.name));
-      cards.innerHTML = visible.length ? visible.map((character, index) => `<article class="card"><div class="portrait"><img src="${character.image}" alt="${character.name}"><span class="rank">${String(index + 1).padStart(2, '0')}</span></div><div class="card-body"><div class="name-row"><h2>${character.name}</h2></div><div class="rating-row"><div class="stars">${stars(character)}</div><span class="score">${getScore(character.id) ? getScore(character.id) + '.0 / 5' : 'UNRATED'}</span></div></div></article>`).join('') : '<div class="empty">No characters found.</div>';
+      cards.innerHTML = visible.length ? visible.map((character, index) => `<article class="card"><div class="portrait"><img src="${character.image}" alt="${escapeHtml(character.name)}"><span class="rank">${String(index + 1).padStart(2, '0')}</span></div><div class="card-body"><div class="name-row"><h2>${escapeHtml(character.name)}</h2></div><div class="rating-row"><div class="stars">${stars(character)}</div><span class="score">${getScore(character.id) ? getScore(character.id) + '.0 / 5' : 'UNRATED'}</span></div></div></article>`).join('') : '<div class="empty">No characters found.</div>';
       cards.querySelectorAll('.star').forEach(button => button.addEventListener('click', () => { scores[button.dataset.id] = Number(button.dataset.score); localStorage.setItem('waifu-scores', JSON.stringify(scores)); renderCards(); renderRanking(); }));
     }
     function renderRanking() {
       const ranked = [...characters].sort((a, b) => getScore(b.id) - getScore(a.id) || a.name.localeCompare(b.name));
-      leaderboard.innerHTML = ranked.map((character, index) => `<div class="leader"><span class="leader-position">${String(index + 1).padStart(2, '0')}</span><div class="leader-name">${character.name}<span class="leader-sub">${character.type}</span></div><span class="leader-score">${getScore(character.id) ? getScore(character.id) + ' / 5' : '—'}</span></div>`).join('');
+      leaderboard.innerHTML = ranked.map((character, index) => `<div class="leader"><span class="leader-position">${String(index + 1).padStart(2, '0')}</span><div class="leader-name">${escapeHtml(character.name)}<span class="leader-sub">${escapeHtml(character.type || 'Featured')}</span></div><span class="leader-score">${getScore(character.id) ? getScore(character.id) + ' / 5' : '—'}</span></div>`).join('');
       const count = Object.keys(scores).filter(id => scores[id]).length;
       document.querySelector('#ratedCount').textContent = `${count} / ${characters.length} RATED`;
     }
     document.querySelector('#search').addEventListener('input', renderCards);
     document.querySelector('#sort').addEventListener('change', renderCards);
+    document.querySelector('#addButton').addEventListener('click', () => document.querySelector('#addForm').classList.toggle('open'));
+    document.querySelector('#cancelAdd').addEventListener('click', () => document.querySelector('#addForm').classList.remove('open'));
+    document.querySelector('#addForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const name = document.querySelector('#photoName').value.trim();
+      const file = document.querySelector('#photoFile').files[0];
+      if (!name || !file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const addition = { id: `custom-${Date.now()}`, name, image: reader.result, type: 'Community addition' };
+        const savedCharacters = JSON.parse(localStorage.getItem('waifu-characters') || '[]');
+        savedCharacters.push(addition);
+        localStorage.setItem('waifu-characters', JSON.stringify(savedCharacters));
+        characters.push(addition);
+        event.target.reset();
+        event.target.classList.remove('open');
+        renderCards();
+        renderRanking();
+      };
+      reader.readAsDataURL(file);
+    });
     renderCards();
     renderRanking();
   </script>
